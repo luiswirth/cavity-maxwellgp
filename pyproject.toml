@@ -1,5 +1,5 @@
 [project]
-name = "cavity-epgp"
+name = "cavity-maxwell"
 version = "0.1.0"
 description = "Ehrenpreis-Palamodov Gaussian-process solver for the PEC cavity reaction operator"
 requires-python = ">=3.12"
@@ -14,7 +14,7 @@ dependencies = [
 gpu = ["jax[cuda12]>=0.8.1"]
 
 [project.scripts]
-epgp-operator = "cavity_epgp.operators:main"
+epgp-operator = "cavity_maxwell.operators:main"
 
 [build-system]
 requires = ["uv_build>=0.11.17,<0.12.0"]

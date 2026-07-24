@@ -1,4 +1,4 @@
-# cavity-epgp
+# cavity-maxwell
 
 Ehrenpreis-Palamodov Gaussian process (EPGP) solver for the interior PEC cavity
 reaction operator. A thin cavity-specific layer over
