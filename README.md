@@ -16,7 +16,7 @@ points). The cavity geometry is set by the semi-axes in `res/config_{shape}.txt`
 - [uv](https://docs.astral.sh/uv/) (handles Python and all dependencies)
 
 `uv` resolves `maxwellgp` from GitHub over https; no SSH key needed. For local
-development against a sibling `../maxwellgp` checkout, see the override note in
+development against a local `../../impl` checkout, see the override note in
 `pyproject.toml`.
 
 ## Run locally
