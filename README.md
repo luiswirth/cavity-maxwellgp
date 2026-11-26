@@ -5,7 +5,9 @@ reaction operator. A thin cavity-specific layer over
 [maxwellgp](https://github.com/luiswirth/maxwellgp): it owns the analytic
 dipole / incident-field physics (the dyadic Green's function) and assembles the
 dipole transmit-to-receive reaction operator `T`, its posterior covariance, and
-field slices. The plane-wave prior satisfies Maxwell's equations intrinsically.
+field slices. The plane-wave prior satisfies Maxwell's equations intrinsically. Each of the
+`N_s` directions carries the quadrature weight `1/N_s` of the uniform probability
+measure on the sphere, so every `N_s` approximates the same prior.
 
 Convergence is controlled by two parameters: `N_s` (`--n-spectral`, number of
 plane-wave features) and `N_b` (`--n-boundary`, number of boundary conditioning
@@ -27,9 +29,10 @@ development against a local `../../impl` checkout, see the override note in
 ./run_local.sh grid            # 2D (N_s, N_b) grid, both shapes
 ./run_local.sh field ellipse   # field slice at the highest-fidelity grid config
 ./run_local.sh noise sphere    # fixed resolution, sweep assumed boundary noise
+./run_local.sh noise-grid      # N_s sweep at each of several assumed noise levels
 ```
 
-The taskfiles `euler/{grid,field,noise}.txt` define the runs. To run a single
+The taskfiles `euler/{grid,field,noise,noise_grid}.txt` define the runs. To run a single
 operator or field slice directly:
 
 ```bash
@@ -43,6 +46,7 @@ uv run epgp-operator field    --config res/config_ellipse.txt --n-spectral 1024 
 euler/submit_grid.sh  [shape]  # sbatch 2D (N_s, N_b) convergence grid
 euler/submit_field.sh [shape]  # sbatch field slice at the highest-fidelity grid config
 euler/submit_noise.sh [shape]  # sbatch assumed-noise sweep
+euler/submit_noise_grid.sh [shape]  # sbatch N_s sweep at each assumed noise level
 euler/submit_ksweep.sh [shape] # sbatch wavenumber sweep (conditioning vs k)
 ```
 
@@ -51,7 +55,7 @@ and flagged at the top of that file; adjust them for another SLURM site.
 
 ## Output
 
-Per shape, under `out/{grid,field,noise}/{shape}/`:
+Per shape, under `out/{grid,field,noise,noise-grid}/{shape}/` (noise runs in `ln{log_noise}/`):
 
 - `T_ns{ns}_nb{nb}.npy` reaction operator, `Sigma_ns{ns}_nb{nb}.npy` its covariance
 - `field.npz` field slice (field runs)
