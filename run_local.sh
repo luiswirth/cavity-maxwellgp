@@ -5,6 +5,7 @@
 #   ./run_local.sh grid  [geom...]   # 2D (N_s, N_b) convergence grid
 #   ./run_local.sh field [geom...]   # field slice at the highest-fidelity grid config
 #   ./run_local.sh noise [geom...]   # fixed-resolution sweep over assumed noise
+#   ./run_local.sh noise-grid [geom...]  # N_s sweep at each of several assumed noise levels
 #
 # geom defaults to: ellipse sphere. Requires uv (https://docs.astral.sh/uv/).
 set -euo pipefail
@@ -14,7 +15,8 @@ case "$MODE" in
   grid)  TASKFILE=euler/grid.txt;;
   field) TASKFILE=euler/field.txt;;
   noise) TASKFILE=euler/noise.txt;;
-  *) echo "usage: $0 grid|field|noise [geom...]" >&2; exit 1;;
+  noise-grid) TASKFILE=euler/noise_grid.txt;;
+  *) echo "usage: $0 grid|field|noise|noise-grid [geom...]" >&2; exit 1;;
 esac
 [[ $# -eq 0 ]] && set -- ellipse sphere
 
@@ -24,12 +26,12 @@ uv sync --quiet
 
 for geom in "$@"; do
   base="$ROOT/out/$MODE/$geom"
-  [[ "$MODE" != noise ]] && { mkdir -p "$base"; rm -f "$base/manifest.csv" "$base/provenance.csv"; }
+  rm -rf "$base"; mkdir -p "$base"
   while read -r NS NB LN; do
     R="$base"; NOISE_ARG=()
-    if [[ "$MODE" == noise ]]; then
+    if [[ -n "${LN:-}" ]]; then
       R="$base/ln${LN}"; NOISE_ARG=(--log-noise "$LN")
-      mkdir -p "$R"; rm -f "$R/manifest.csv" "$R/provenance.csv"
+      mkdir -p "$R"
     fi
     SECONDS=0
     log=$(uv run --project "$ROOT" epgp-operator operator \
@@ -37,9 +39,9 @@ for geom in "$@"; do
       --outdir "$R" ${NOISE_ARG[@]+"${NOISE_ARG[@]}"} 2>&1)
     echo "$log"
     dofs=$(echo "$log" | grep -oE 'dofs=[0-9]+' | grep -oE '[0-9]+')
-    cond=$(echo "$log" | grep -oE 'cond=[0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
-    log_noise=$(echo "$log" | grep -oE 'log_noise=[0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
-    nlml=$(echo "$log" | grep -oE 'nlml=[0-9.eE+-]+' | grep -oE '[0-9.eE+-]+$')
+    cond=$(echo "$log" | grep -oE 'cond=[0-9a-z.E+-]+' | grep -oE '[0-9a-z.E+-]+$')
+    log_noise=$(echo "$log" | grep -oE 'log_noise=[0-9a-z.E+-]+' | grep -oE '[0-9a-z.E+-]+$')
+    nlml=$(echo "$log" | grep -oE 'nlml=[0-9a-z.E+-]+' | grep -oE '[0-9a-z.E+-]+$')
     # manifest columns: n_spectral,n_boundary,dofs,secs,mem_kb,cond  (mem_kb empty locally)
     echo "${NS},${NB},${dofs},${SECONDS},,${cond}" >> "$R/manifest.csv"
     echo "$(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown),$(hostname),${NS},${NB},$(date -Is),${log_noise},${nlml}" >> "$R/provenance.csv"

@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 5
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -20,6 +20,7 @@ name = "cavity-maxwellgp"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "equinox" },
     { name = "jax" },
     { name = "maxwellgp" },
     { name = "numpy" },
@@ -33,6 +34,7 @@ gpu = [
 
 [package.metadata]
 requires-dist = [
+    { name = "equinox", specifier = ">=0.13.8" },
     { name = "jax", specifier = ">=0.8.1" },
     { name = "jax", extras = ["cuda12"], marker = "extra == 'gpu'", specifier = ">=0.8.1" },
     { name = "maxwellgp", git = "https://github.com/luiswirth/maxwellgp.git?branch=main" },

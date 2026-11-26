@@ -3,6 +3,7 @@ import os
 from dataclasses import dataclass
 
 import jax
+import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 import optax
@@ -37,6 +38,17 @@ def load_config(path):
     data = np.array([[float(v) for v in ln.split()] for ln in lines[1:]])
     assert len(data) == n, f"config declares N={n} but has {len(data)} rows"
     return float(k), semiaxes, data[:, 0:3], data[:, 3:6], data[:, 6:9]
+
+
+def quadrature_kernel(n_spectral, k, **kw):
+    """Plane-wave kernel with the equal-weight quadrature of the uniform probability measure on the sphere.
+
+    Each of the N_s directions carries weight 1/N_s, so the discrete prior approximates
+    one fixed prior whatever N_s. `log_weights` holds the log precision of each feature.
+    """
+    kernel = MaxwellKernel(n_spectral=n_spectral, wavenumber=k, **kw)
+    precision = jnp.full_like(kernel.log_weights, jnp.log(n_spectral))
+    return eqx.tree_at(lambda m: m.log_weights, kernel, precision)
 
 
 def boundary_collocation(semiaxes, n):
@@ -77,7 +89,7 @@ def fit(cfg, semiaxes, k, Y, n_spectral):
     bnd_points, bnd_normals = boundary_collocation(semiaxes, cfg.n_boundary)
     X_train = jnp.asarray(np.concatenate([bnd_points, bnd_normals], axis=1))
 
-    kernel = MaxwellKernel(n_spectral=n_spectral, wavenumber=k, trace="tangential")
+    kernel = quadrature_kernel(n_spectral, k, trace="tangential")
     log_noise = cfg.log_noise
     if cfg.opt_noise:
         log_noise, _ = optimize_log_noise(kernel, log_noise, X_train, Y, cfg.opt_steps)
@@ -131,7 +143,9 @@ def run_operator(args):
     cfg = GPConfig.from_args(args)
     T, Sigma, nlml, post, model = assemble_operator(cfg, semiaxes, k, points, e1, e2, ns)
 
-    cond = float(np.linalg.cond(np.asarray(post.L @ post.L.conj().T)))
+    # A non-finite factor is a failed Cholesky: the solve is recorded, as nan.
+    LLh = np.asarray(post.L @ post.L.conj().T)
+    cond = float(np.linalg.cond(LLh)) if np.all(np.isfinite(LLh)) else float("nan")
     recip = np.linalg.norm(T - T.T) / np.linalg.norm(T)
     std = np.sqrt(np.clip(np.real(np.diag(Sigma)), 0.0, None))
     os.makedirs(args.outdir, exist_ok=True)
